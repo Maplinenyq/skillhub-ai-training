@@ -1,16 +1,24 @@
 package com.tianji.aigc.service.impl;
 
 
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.tianji.aigc.config.SystemPromptConfig;
+import com.tianji.aigc.config.ToolResultHolder;
+import com.tianji.aigc.constants.Constant;
 import com.tianji.aigc.enums.ChatEventTypeEnum;
 import com.tianji.aigc.service.ChatService;
 import com.tianji.aigc.vo.ChatEventVO;
 import com.tianji.common.utils.DateUtils;
+import com.tianji.common.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -22,6 +30,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
+    public static final ChatEventVO STOP_EVENT = ChatEventVO.builder()
+            .eventType(ChatEventTypeEnum.STOP.getValue())
+            .build();
     private final ChatClient chatClient;
     private final SystemPromptConfig systemPromptConfig;
     private final StringRedisTemplate stringRedisTemplate;
@@ -46,13 +57,17 @@ public class ChatServiceImpl implements ChatService {
         var conversationId = ChatService.getConversationId(sessionId);
         // 创建一个大模型输出缓存器，用于输出中断的信息储存
         var outputBuilder = new StringBuilder();
-
+        // 生成请求ID
+        var requestId = IdUtil.fastSimpleUUID();
+        // 获取用户ID
+        var userId = UserContext.getUser();
         return this.chatClient.prompt()
                 .system(promptSystem -> promptSystem
                         .text(this.systemPromptConfig.getChatSystemMessage().get())
                         .params(Map.of("now" , DateUtils.now()))
                 )
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId)) // 设置对话记忆里的对话ID
+                .toolContext(Map.of(Constant.REQUEST_ID, requestId, Constant.USER_ID, userId)) //通过工具上下文传递参数
                 .user(question)
                 .stream()
                 .chatResponse()
@@ -69,14 +84,32 @@ public class ChatServiceImpl implements ChatService {
                     var text = response.getResult().getOutput().getText();
                     // 将大模型生成的内容追加到缓存器中
                     outputBuilder.append(text);
+
+                    // 获取结束原因
+                    String finishReason = response.getResult().getMetadata().getFinishReason();
+                    if(StrUtil.equals(finishReason, Constant.STOP)){
+                        // 获取消息Id
+                        var messageId = response.getMetadata().getId();
+                        // 将消息ID和请求ID相关联
+                        ToolResultHolder.put(messageId , Constant.REQUEST_ID , requestId);
+                    }
                     return ChatEventVO.builder()
                             .eventData(text)
                             .eventType(ChatEventTypeEnum.DATA.getValue()) // 数据事件
                             .build();
                 })
-                .concatWith(Flux.just(ChatEventVO.builder()
-                        .eventType(ChatEventTypeEnum.STOP.getValue()) // 数据结束事件
-                        .build()));
+                .concatWith(Flux.defer(() -> {
+                    Map<String, Object> result = ToolResultHolder.get(requestId);
+                    if(ObjectUtil.isNotEmpty(result)){
+                        ToolResultHolder.remove(requestId);
+                        // 工具被调用了，需要向前端传递参数
+                        return Flux.just(ChatEventVO.builder()
+                                .eventType(ChatEventTypeEnum.PARAM.getValue())
+                                .eventData(result)
+                                .build(), STOP_EVENT);
+                    }
+                    return Flux.just(STOP_EVENT); // 结束标识
+                }));
     }
 
     /**
