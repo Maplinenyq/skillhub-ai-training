@@ -9,16 +9,18 @@ import com.tianji.aigc.config.ToolResultHolder;
 import com.tianji.aigc.constants.Constant;
 import com.tianji.aigc.enums.ChatEventTypeEnum;
 import com.tianji.aigc.service.ChatService;
+import com.tianji.aigc.service.ChatSessionService;
 import com.tianji.aigc.vo.ChatEventVO;
 import com.tianji.common.utils.DateUtils;
 import com.tianji.common.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -37,7 +39,8 @@ public class ChatServiceImpl implements ChatService {
     private final SystemPromptConfig systemPromptConfig;
     private final StringRedisTemplate stringRedisTemplate;
     private final ChatMemory chatMemory;
-
+    private final VectorStore vectorStore;
+    private final ChatSessionService chatSessionService;
     // 通过一个容器，保存当前会话的会话ID 以及 是否继续生成的标识，用于后续停止会话
     // 容器实现：1、使用Map， 2、如果考虑到分布式场景的话，需要使用redis
     // private static final Map<String, Boolean> GENERATE_STATUS = new ConcurrentHashMap<>();
@@ -61,12 +64,23 @@ public class ChatServiceImpl implements ChatService {
         var requestId = IdUtil.fastSimpleUUID();
         // 获取用户ID
         var userId = UserContext.getUser();
+        // 定义RAG增强
+        QuestionAnswerAdvisor questionAnswerAdvisor = QuestionAnswerAdvisor.builder(this.vectorStore)
+                .searchRequest(SearchRequest.builder()
+                        .similarityThreshold(0.6d) // 设置相似度阈值
+                        .topK(6) // 设置返回的最相似文档数量
+                        .build())
+                .build();
+        // 更新会话标题和时间
+        this.chatSessionService.update(sessionId , question , userId);
         return this.chatClient.prompt()
                 .system(promptSystem -> promptSystem
                         .text(this.systemPromptConfig.getChatSystemMessage().get())
                         .params(Map.of("now" , DateUtils.now()))
                 )
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId)) // 设置对话记忆里的对话ID
+                .advisors(advisor -> advisor
+                        .advisors(questionAnswerAdvisor) // 添加RAG增强
+                        .param(ChatMemory.CONVERSATION_ID, conversationId)) // 设置对话记忆里的对话ID
                 .toolContext(Map.of(Constant.REQUEST_ID, requestId, Constant.USER_ID, userId)) //通过工具上下文传递参数
                 .user(question)
                 .stream()

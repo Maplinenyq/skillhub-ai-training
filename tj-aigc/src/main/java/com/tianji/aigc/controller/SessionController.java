@@ -1,6 +1,7 @@
 package com.tianji.aigc.controller;
 
 import com.tianji.aigc.service.ChatSessionService;
+import com.tianji.aigc.vo.ChatSessionVO;
 import com.tianji.aigc.vo.MessageVO;
 import com.tianji.aigc.vo.SessionVO;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.aspectj.bridge.Message;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/session")
@@ -41,4 +43,29 @@ public class SessionController {
     public List<MessageVO> queryBySessionId(@PathVariable String sessionId){
         return this.chatSessionService.queryBySessionId(sessionId);
     }
+
+    /**
+     * 查询历史会话
+     */
+    @GetMapping("/history")
+    public Map<String,List<ChatSessionVO>> queryHistorySession(){
+        return this.chatSessionService.queryHistorySession();
+    }
+
+    /**
+     * 更新会话标题
+     */
+    @PutMapping("/history")
+    public void updateSessionTitle(@RequestParam String sessionId , @RequestParam String title){
+        this.chatSessionService.updateSessionTitle(sessionId, title);
+    }
+
+    /**
+     * 删除会话
+     */
+    @DeleteMapping("/history")
+    public void deleteHistorySession(@RequestParam("sessionId") String sessionId) {
+        this.chatSessionService.deleteHistorySession(sessionId);
+    }
+
 }
