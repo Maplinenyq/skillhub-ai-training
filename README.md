@@ -21,7 +21,7 @@
 
 ## 技术架构
 
-- 基础框架：Java 17、Spring Boot、MyBatis-Plus
+- 基础框架：Java 17、Spring Boot、MyBatis-Plus、SpringAI
 - 微服务：Spring Cloud Alibaba、Nacos、Gateway、OpenFeign、Sentinel
 - 数据存储：MySQL、Redis、MongoDB、Elasticsearch
 - 消息与任务：RabbitMQ、XXL-JOB、DelayQueue
