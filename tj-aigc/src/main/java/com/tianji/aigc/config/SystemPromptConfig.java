@@ -2,6 +2,7 @@ package com.tianji.aigc.config;
 
 import com.alibaba.cloud.nacos.NacosConfigManager;
 import com.alibaba.nacos.api.config.listener.Listener;
+import com.tianji.aigc.agent.RecommendAgent;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +23,21 @@ public class SystemPromptConfig {
 
     // 使用原子引用，保证线程安全
     private final AtomicReference<String> chatSystemMessage = new AtomicReference<>();
+    private final AtomicReference<String> routeAgentSystemMessage = new AtomicReference<>();
+    private final AtomicReference<String> recommendAgentSystemMessage = new AtomicReference<>();
+    private final AtomicReference<String> buyAgentSystemMessage = new AtomicReference<>();
+    private final AtomicReference<String> consultAgentSystemMessage = new AtomicReference<>();
+    private final AtomicReference<String> knowledgeAgentSystemMessage = new AtomicReference<>();
 
     @PostConstruct // 初始化时加载配置
     public void init() {
         // 读取配置文件
         loadConfig(aiProperties.getSystem().getChat(), chatSystemMessage);
+        loadConfig(aiProperties.getSystem().getRouteAgent(), routeAgentSystemMessage);
+        loadConfig(aiProperties.getSystem().getRecommendAgent(), recommendAgentSystemMessage);
+        loadConfig(aiProperties.getSystem().getBuyAgent(), buyAgentSystemMessage);
+        loadConfig(aiProperties.getSystem().getConsultAgent(), consultAgentSystemMessage);
+        loadConfig(aiProperties.getSystem().getKnowledgeAgent(), knowledgeAgentSystemMessage);
     }
 
     private void loadConfig(AIProperties.System.Chat chatConfig, AtomicReference<String> target) {
