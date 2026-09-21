@@ -2,6 +2,7 @@ package com.tianji.aigc.memory.mongodb;
 
 import cn.hutool.core.collection.CollStreamUtil;
 import com.tianji.aigc.memory.MessageUtil;
+import com.tianji.aigc.memory.MyChatMemoryRepository;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.Message;
@@ -14,7 +15,7 @@ import java.util.List;
 /**
  * 基于MongoDB的聊天记忆仓库
  */
-public class MongoDBChatMemoryRepository implements ChatMemoryRepository {
+public class MongoDBChatMemoryRepository implements ChatMemoryRepository , MyChatMemoryRepository {
 
     @Resource
     private MongoTemplate mongoTemplate;
@@ -51,5 +52,10 @@ public class MongoDBChatMemoryRepository implements ChatMemoryRepository {
     public void deleteByConversationId(String conversationId) {
         Query query = Query.query(Criteria.where("conversationId").is(conversationId));
         this.mongoTemplate.remove(query, ChatRecord.class);
+    }
+
+    @Override
+    public void optimization(String conversationId) {
+        // TODO 待实现
     }
 }

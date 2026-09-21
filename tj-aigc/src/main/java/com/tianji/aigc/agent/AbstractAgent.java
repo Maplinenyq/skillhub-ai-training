@@ -113,6 +113,10 @@ public abstract class AbstractAgent implements Agent {
      */
     @Override
     public String process(String question, String sessionId) {
+        // 获取用户ID
+        var userId = UserContext.getUser();
+        // 更新会话时间
+        this.chatSessionService.update(sessionId , question , userId);
         // 生成请求ID
         var requestId = generateRequestId();
         return getChatClientRequest(question, sessionId, requestId)

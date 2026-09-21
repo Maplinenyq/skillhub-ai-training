@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * 基于Redis的聊天记忆仓库
  */
-public class RedisChatMemoryRepository implements ChatMemoryRepository {
+public class RedisChatMemoryRepository implements ChatMemoryRepository, MyChatMemoryRepository{
 
     public static final String DEFAULT_PREFIX = "CHAT:";
     private final String prefix;
@@ -67,5 +67,13 @@ public class RedisChatMemoryRepository implements ChatMemoryRepository {
 
     private String getKey(String conversationId){
         return prefix + conversationId;
+    }
+
+    @Override
+    public void optimization(String conversationId) {
+        var redisKey = this.getKey(conversationId);
+        var listOps = this.stringRedisTemplate.boundListOps(redisKey);
+        // 删除最后两条消息,相当于删除最近的两条参数
+        listOps.rightPop(2);
     }
 }
