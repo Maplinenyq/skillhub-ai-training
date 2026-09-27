@@ -68,4 +68,9 @@ public class AgentServiceImpl implements ChatService {
         var routeAgent = this.findAgentByType(AgentTypeEnum.ROUTE);
         routeAgent.stop(sessionId);
     }
+
+    @Override
+    public String chatText(String question) {
+        return "";
+    }
 }

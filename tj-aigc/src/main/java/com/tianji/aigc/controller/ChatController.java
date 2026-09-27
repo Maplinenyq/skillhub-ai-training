@@ -3,6 +3,7 @@ package com.tianji.aigc.controller;
 import com.tianji.aigc.dto.ChatDTO;
 import com.tianji.aigc.service.ChatService;
 import com.tianji.aigc.vo.ChatEventVO;
+import com.tianji.aigc.vo.TemplateVO;
 import com.tianji.common.annotations.NoWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import reactor.core.publisher.Flux;
 public class ChatController {
 
     private final ChatService chatService;
+
+    private static final TemplateVO TEMPLATE_VO = new TemplateVO();
 
     /**
      * 聊天
@@ -36,5 +39,24 @@ public class ChatController {
     @PostMapping("/stop")
     public void stop(@RequestParam("sessionId") String sessionId) {
         this.chatService.stop(sessionId);
+    }
+
+    /**
+     * 聊天
+     * @param question 问题
+     * @return 聊天结果
+     */
+    @PostMapping("/text")
+    public String chatText(@RequestBody String question) {
+        return this.chatService.chatText(question);
+    }
+
+    /**
+     * 获取模板
+     * @return 模板
+     */
+    @GetMapping("/templates")
+    public TemplateVO getTemplates() {
+        return TEMPLATE_VO;
     }
 }
