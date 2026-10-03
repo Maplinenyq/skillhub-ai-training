@@ -4,11 +4,13 @@ import com.alibaba.dashscope.app.Application;
 import com.alibaba.dashscope.app.ApplicationParam;
 import com.alibaba.dashscope.utils.JsonUtils;
 import com.tianji.aigc.config.DashScopeProperties;
+import com.tianji.aigc.config.SystemPromptConfig;
 import com.tianji.aigc.enums.ChatEventTypeEnum;
 import com.tianji.aigc.service.ChatService;
 import com.tianji.aigc.vo.ChatEventVO;
 import com.tianji.common.utils.TokenContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -29,6 +31,8 @@ public class AppAgentChatService implements ChatService {
     private static final Map<String, Boolean> GENERATE_STATUS = new ConcurrentHashMap<>();
     // 输出结束的标记
     private static final ChatEventVO STOP_EVENT = ChatEventVO.builder().eventType(ChatEventTypeEnum.STOP.getValue()).build();
+    private final ChatClient openAiChatClient;
+    private final SystemPromptConfig systemPromptConfig;
 
     @Override
     public Flux<ChatEventVO> chat(String question, String sessionId) {
@@ -89,6 +93,10 @@ public class AppAgentChatService implements ChatService {
 
     @Override
     public String chatText(String question) {
-        return "";
+        return this.openAiChatClient.prompt()
+                .system(promptSystem -> promptSystem.text(this.systemPromptConfig.getTextSystemMessage().get()))
+                .user(question)
+                .call()
+                .content();
     }
 }

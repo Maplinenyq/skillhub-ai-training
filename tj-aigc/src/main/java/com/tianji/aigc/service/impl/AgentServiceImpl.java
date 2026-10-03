@@ -2,11 +2,13 @@ package com.tianji.aigc.service.impl;
 
 import cn.hutool.extra.spring.SpringUtil;
 import com.tianji.aigc.agent.Agent;
+import com.tianji.aigc.config.SystemPromptConfig;
 import com.tianji.aigc.enums.AgentTypeEnum;
 import com.tianji.aigc.enums.ChatEventTypeEnum;
 import com.tianji.aigc.service.ChatService;
 import com.tianji.aigc.vo.ChatEventVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -20,6 +22,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "tj.ai", name = "chat-type", havingValue = "ROUTE")
 public class AgentServiceImpl implements ChatService {
+
+    private final ChatClient openAiChatClient;
+    private final SystemPromptConfig systemPromptConfig;
 
     @Override
     public Flux<ChatEventVO> chat(String question, String sessionId) {
@@ -71,6 +76,10 @@ public class AgentServiceImpl implements ChatService {
 
     @Override
     public String chatText(String question) {
-        return "";
+        return this.openAiChatClient.prompt()
+                .system(promptSystem -> promptSystem.text(this.systemPromptConfig.getTextSystemMessage().get()))
+                .user(question)
+                .call()
+                .content();
     }
 }

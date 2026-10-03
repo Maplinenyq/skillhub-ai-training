@@ -73,7 +73,7 @@ public class ChatServiceImpl implements ChatService {
         // 定义RAG增强
         QuestionAnswerAdvisor questionAnswerAdvisor = QuestionAnswerAdvisor.builder(this.vectorStore)
                 .searchRequest(SearchRequest.builder()
-                        .similarityThreshold(0.6d) // 设置相似度阈值
+                        //.similarityThreshold(0.6d) // 设置相似度阈值
                         .topK(6) // 设置返回的最相似文档数量
                         .build())
                 .build();

@@ -9,6 +9,10 @@ spring:
     name: aigc-service
   main:
     allow-circular-references: true # 允许循环引用
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 tj:
   swagger:
     enable: true
@@ -49,9 +53,4 @@ tj:
       type: Redis #对话记忆存储方式，Redis / MYSQL / MongoDB
     chat-type: ENHANCE # ROUTE / ENHANCE / APP
     audio-type: DASHSCOPE # OPENAI / DASHSCOPE
-  ali:
-    oss:
-      endpoint: oss-cn-shanghai.aliyuncs.com
-      access-id: ${OSS_ACCESSKEY_ID}
-      access-key: ${OSS_ACCESSKEY_SECRET}
-      bucket: itcast-zzj
+
